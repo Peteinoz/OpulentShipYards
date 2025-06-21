@@ -1,42 +1,60 @@
-import { NextRequest, NextResponse } from 'next/server'
+const fetch = require('node-fetch');
 
-export const dynamic = 'force-dynamic'
+exports.handler = async (event, context) => {
+  // Handle CORS preflight requests
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS'
+      },
+      body: ''
+    };
+  }
 
-interface SearchResult {
-  title: string
-  snippet: string
-  url: string
-  imageUrl: string
-}
+  // Only allow POST requests
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ error: 'Method not allowed' })
+    };
+  }
 
-interface SearchResponse {
-  avaSummary: string
-  answer: string
-  sources: SearchResult[]
-}
-
-export async function POST(request: NextRequest) {
   try {
-    const { query } = await request.json()
+    const { query } = JSON.parse(event.body);
 
     if (!query || typeof query !== 'string') {
-      return NextResponse.json(
-        { error: 'Query is required and must be a string' },
-        { status: 400 }
-      )
+      return {
+        statusCode: 400,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ error: 'Query is required and must be a string' })
+      };
     }
 
     // Get API keys from environment variables
-    const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY
-    const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY
-    const GOOGLE_SEARCH_ENGINE_ID = process.env.GOOGLE_SEARCH_ENGINE_ID
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY
+    const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
+    const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
+    const GOOGLE_SEARCH_ENGINE_ID = process.env.GOOGLE_SEARCH_ENGINE_ID;
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
     if (!PERPLEXITY_API_KEY || !GOOGLE_API_KEY || !GOOGLE_SEARCH_ENGINE_ID || !GEMINI_API_KEY) {
-      return NextResponse.json(
-        { error: 'Missing required API keys' },
-        { status: 500 }
-      )
+      return {
+        statusCode: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ error: 'Missing required API keys' })
+      };
     }
 
     // Parallel API calls
@@ -77,64 +95,64 @@ export async function POST(request: NextRequest) {
           }]
         })
       })
-    ])
+    ]);
 
-    let avaSummary = "AVA is getting ready to find amazing results for you!"
-    let answer = ""
-    let sources: SearchResult[] = []
+    let avaSummary = "AVA is getting ready to find amazing results for you!";
+    let answer = "";
+    let sources = [];
 
     // Process AVA summary
     if (avaResult.status === 'fulfilled') {
       try {
-        const avaData = await avaResult.value.json()
+        const avaData = await avaResult.value.json();
         if (avaData.candidates && avaData.candidates.length > 0 &&
             avaData.candidates[0].content && avaData.candidates[0].content.parts &&
             avaData.candidates[0].content.parts.length > 0) {
-          avaSummary = avaData.candidates[0].content.parts[0].text
+          avaSummary = avaData.candidates[0].content.parts[0].text;
         }
       } catch (error) {
-        console.error('Error processing AVA summary:', error)
+        console.error('Error processing AVA summary:', error);
       }
     }
 
     // Process Perplexity result
     if (perplexityResult.status === 'fulfilled') {
       try {
-        const perplexityData = await perplexityResult.value.json()
-        let parsedContent
+        const perplexityData = await perplexityResult.value.json();
+        let parsedContent;
         
         try {
-          parsedContent = JSON.parse(perplexityData.choices[0].message.content)
+          parsedContent = JSON.parse(perplexityData.choices[0].message.content);
         } catch (e) {
           // If JSON parsing fails, create a fallback structure
           parsedContent = {
             answer: perplexityData.choices[0].message.content,
             sources: []
-          }
+          };
         }
 
-        answer = parsedContent.answer || ""
-        const perplexitySources = parsedContent.sources || []
+        answer = parsedContent.answer || "";
+        const perplexitySources = parsedContent.sources || [];
 
         // Fetch images for each source
         const sourcesWithImages = await Promise.all(
-          perplexitySources.map(async (source: any) => {
-            let imageUrl = 'https://placehold.co/800x600/E0E0E0/333333?text=Image%20Not%20Found'
+          perplexitySources.map(async (source) => {
+            let imageUrl = 'https://placehold.co/800x600/E0E0E0/333333?text=Image%20Not%20Found';
             
             if (source.title && GOOGLE_API_KEY && GOOGLE_SEARCH_ENGINE_ID) {
               try {
-                const imageQuery = encodeURIComponent(`${source.title} yacht`)
-                const googleImageApiUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${imageQuery}&searchType=image&num=1`
+                const imageQuery = encodeURIComponent(`${source.title} yacht`);
+                const googleImageApiUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${GOOGLE_SEARCH_ENGINE_ID}&q=${imageQuery}&searchType=image&num=1`;
                 
-                const imageResponse = await fetch(googleImageApiUrl)
+                const imageResponse = await fetch(googleImageApiUrl);
                 if (imageResponse.ok) {
-                  const imageData = await imageResponse.json()
+                  const imageData = await imageResponse.json();
                   if (imageData.items && imageData.items.length > 0 && imageData.items[0].link) {
-                    imageUrl = imageData.items[0].link
+                    imageUrl = imageData.items[0].link;
                   }
                 }
               } catch (error) {
-                console.error(`Error fetching image for "${source.title}":`, error)
+                console.error(`Error fetching image for "${source.title}":`, error);
               }
             }
 
@@ -143,11 +161,11 @@ export async function POST(request: NextRequest) {
               snippet: source.snippet || 'No description available.',
               url: source.url || '#',
               imageUrl
-            }
+            };
           })
-        )
+        );
 
-        sources = sourcesWithImages
+        sources = sourcesWithImages;
 
         // Update AVA summary with final results if we have a comprehensive answer
         if (answer && avaSummary.includes("starting the search")) {
@@ -163,49 +181,68 @@ export async function POST(request: NextRequest) {
                   }]
                 }]
               })
-            })
+            });
 
             if (refinedAvaResponse.ok) {
-              const refinedAvaData = await refinedAvaResponse.json()
+              const refinedAvaData = await refinedAvaResponse.json();
               if (refinedAvaData.candidates && refinedAvaData.candidates.length > 0 &&
                   refinedAvaData.candidates[0].content && refinedAvaData.candidates[0].content.parts &&
                   refinedAvaData.candidates[0].content.parts.length > 0) {
-                avaSummary = refinedAvaData.candidates[0].content.parts[0].text
+                avaSummary = refinedAvaData.candidates[0].content.parts[0].text;
               }
             }
           } catch (error) {
-            console.error("Error refining AVA's summary:", error)
+            console.error("Error refining AVA's summary:", error);
           }
         }
 
       } catch (error) {
-        console.error('Error processing Perplexity result:', error)
-        return NextResponse.json(
-          { error: 'Failed to process search results' },
-          { status: 500 }
-        )
+        console.error('Error processing Perplexity result:', error);
+        return {
+          statusCode: 500,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ error: 'Failed to process search results' })
+        };
       }
     } else {
-      console.error('Perplexity API call failed:', perplexityResult.reason)
-      return NextResponse.json(
-        { error: 'Search service unavailable' },
-        { status: 503 }
-      )
+      console.error('Perplexity API call failed:', perplexityResult.reason);
+      return {
+        statusCode: 503,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ error: 'Search service unavailable' })
+      };
     }
 
-    const response: SearchResponse = {
+    const response = {
       avaSummary,
       answer,
       sources
-    }
+    };
 
-    return NextResponse.json(response)
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(response)
+    };
 
   } catch (error) {
-    console.error('Search API error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    console.error('Search API error:', error);
+    return {
+      statusCode: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ error: 'Internal server error' })
+    };
   }
-}
+};
