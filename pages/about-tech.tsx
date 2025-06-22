@@ -84,7 +84,7 @@ export default function AboutTech() {
                 <div>
                   <h4 className="font-medium mb-2 text-gray-800">Frontend</h4>
                   <ul className="text-sm space-y-1">
-                    <li>• Next.js 14 with App Router</li>
+                    <li>• Next.js 13 with Pages Router</li>
                     <li>• TypeScript for type safety</li>
                     <li>• Tailwind CSS for styling</li>
                     <li>• Responsive design</li>
@@ -104,7 +104,7 @@ export default function AboutTech() {
                 <div>
                   <h4 className="font-medium mb-2 text-gray-800">Infrastructure</h4>
                   <ul className="text-sm space-y-1">
-                    <li>• Serverless API routes</li>
+                    <li>• Netlify Functions</li>
                     <li>• Static site generation</li>
                     <li>• Optimized performance</li>
                     <li>• Secure API handling</li>
