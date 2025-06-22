@@ -7,26 +7,32 @@ export default function About() {
       {/* Header Section */}
       <header className="w-full py-4 px-6 md:px-10 flex justify-between items-center bg-transparent z-10">
         {/* Logo */}
-        <Link href="/" className="flex items-center space-x-2">
-          <Image
-            src="https://placehold.co/40x40/000000/FFFFFF?text=OSM"
-            alt="Opulent Shipyards Logo"
-            width={40}
-            height={40}
-            className="rounded-full shadow-md"
-          />
-          <span className="text-lg md:text-xl font-montserrat font-normal text-gray-800 hidden sm:block">
-            Opulent Shipyards
-          </span>
+        <Link href="/">
+          <a className="flex items-center space-x-2">
+            <Image
+              src="https://placehold.co/40x40/000000/FFFFFF?text=OSM"
+              alt="Opulent Shipyards Logo"
+              width={40}
+              height={40}
+              className="rounded-full shadow-md"
+            />
+            <span className="text-lg md:text-xl font-montserrat font-normal text-gray-800 hidden sm:block">
+              Opulent Shipyards
+            </span>
+          </a>
         </Link>
 
         {/* Navigation Links */}
         <nav className="flex items-center space-x-6 md:space-x-8">
-          <Link href="/about" className="text-gray-700 header-link text-sm md:text-base hover:text-gray-900 transition duration-300 font-medium">
-            About
+          <Link href="/about">
+            <a className="text-gray-700 header-link text-sm md:text-base hover:text-gray-900 transition duration-300 font-medium">
+              About
+            </a>
           </Link>
-          <Link href="/about-tech" className="text-gray-700 header-link text-sm md:text-base hover:text-gray-900 transition duration-300">
-            About the Tech
+          <Link href="/about-tech">
+            <a className="text-gray-700 header-link text-sm md:text-base hover:text-gray-900 transition duration-300">
+              About the Tech
+            </a>
           </Link>
         </nav>
       </header>
